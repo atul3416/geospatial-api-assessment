@@ -1,124 +1,89 @@
 # Geospatial File Measurement API
 
-A Django REST Framework API for uploading and processing geospatial files in KML format or ZIP archives containing Shapefiles. The API extracts feature information and calculates area for polygons and length for lines while handling coordinate reference systems appropriately.
+A Django REST Framework API for uploading and processing geospatial files in **KML** format or **ZIP archives containing Shapefiles**.
 
-## Features
+The API extracts feature information, handles Coordinate Reference Systems (CRS), and calculates:
 
-- Upload `.kml` files.
-- Upload `.zip` files containing a Shapefile.
-- Extract feature geometry and properties.
-- Identify geometry types such as Point, LineString, and Polygon.
-- Calculate:
-  - Polygon/MultiPolygon → Area
-  - LineString/MultiLineString → Length
-  - Point → No measurement
-- Detect the source CRS.
-- Transform geographic CRS data to a suitable projected CRS before calculating measurements.
-- Store uploaded-file metadata and measurements in SQLite.
-- Handle invalid files and processing failures gracefully.
-- Provide APIs for file information and feature measurements.
-- Django Admin interface for inspecting processed files and measurements.
+- **Polygon / MultiPolygon → Area**
+- **LineString / MultiLineString → Length**
+- **Point → No measurement**
 
-## Tech Stack
+---
 
-- **Python**
-- **Django**
-- **Django REST Framework**
-- **GeoPandas**
-- **Shapely**
-- **PyProj**
-- **Pandas**
-- **SQLite**
-- **Git/GitHub**
+# 1. Setup
 
-## Project Structure
+## Prerequisites
 
-```text
-geospatial-api/
-│
-├── manage.py
-├── requirements.txt
-├── .gitignore
-├── README.md
-│
-├── config/
-│   ├── settings.py
-│   └── urls.py
-│
-└── files/
-    ├── migrations/
-    ├── admin.py
-    ├── models.py
-    ├── serializers.py
-    ├── tests.py
-    ├── urls.py
-    ├── views.py
-    │
-    └── services/
-        ├── file_reader.py
-        ├── crs_handler.py
-        ├── measurement.py
-        └── processor.py
-```
+- Python 3.x
+- Git
+- pip
 
-## Setup
-
-### 1. Clone the repository
+## Clone the Repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/atul3416/geospatial-api-assessment.git
 cd geospatial-api
 ```
 
-### 2. Create a virtual environment
+## Create a Virtual Environment
 
-Windows:
+### Windows
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-Linux/macOS:
+### Linux / macOS
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run migrations
+## Apply Database Migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 5. Create an admin user
+## Create an Admin User
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 6. Start the development server
+## Run the Application
 
 ```bash
 python manage.py runserver
 ```
 
-The API will be available at:
+The application will be available at:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-## API Endpoints
+The Django Admin interface is available at:
 
-### 1. Upload and Process File
+```text
+http://127.0.0.1:8000/admin/
+```
+
+---
+
+# 2. API
+
+## 2.1 Upload and Process a File
+
+### Endpoint
 
 ```http
 POST /api/files/
@@ -129,14 +94,23 @@ Accepts:
 - `.kml`
 - `.zip` containing a Shapefile
 
-Example using cURL:
+### Example Request
+
+Using cURL:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/files/ \
   -F "file=@sample.kml"
 ```
 
-Example response:
+For a Shapefile ZIP:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/files/ \
+  -F "file=@sample.zip"
+```
+
+### Example Response
 
 ```json
 {
@@ -148,36 +122,65 @@ Example response:
     "status": "COMPLETED",
     "error_message": null,
     "created_at": "2026-10-08T12:00:00Z",
-    "measurements_url": "/api/files/53295d51-d158-42cc-b41b-0549906fd63a/measurements/",
-    "detail_url": "/api/files/53295d51-d158-42cc-b41b-0549906fd63a/"
 }
 ```
 
-### 2. Get File Information
+### Possible Processing Statuses
+
+```text
+PROCESSING
+COMPLETED
+FAILED
+```
+
+---
+
+## 2.2 Get File Information
+
+### Endpoint
 
 ```http
 GET /api/files/{id}/
 ```
 
-Returns information about the uploaded file, including:
+### Example Request
 
-- filename
-- feature count
-- original CRS
-- measurement CRS
-- processing status
-- error information
-- creation time
+```bash
+curl http://127.0.0.1:8000/api/files/53295d51-d158-42cc-b41b-0549906fd63a/
+```
 
-### 3. Get Measurements
+### Example Response
+
+```json
+{
+    "id": "53295d51-d158-42cc-b41b-0549906fd63a",
+    "filename": "sample.kml",
+    "feature_count": 3,
+    "crs": "EPSG:4326",
+    "measurement_crs": "EPSG:32644",
+    "status": "COMPLETED",
+    "error_message": null,
+    "created_at": "2026-10-08T12:00:00Z",
+}
+```
+
+---
+
+## 2.3 Get Feature Measurements
+
+### Endpoint
 
 ```http
 GET /api/files/{id}/measurements/
 ```
 
-Returns measurements for each processed feature.
+### Example Request
 
-Example:
+```bash
+curl http://127.0.0.1:8000/api/files/53295d51-d158-42cc-b41b-0549906fd63a/measurements/
+```
+
+### Example Response
 
 ```json
 [
@@ -211,233 +214,348 @@ Example:
 ]
 ```
 
-## Architecture
+---
 
-The application separates API handling, file reading, CRS processing, and measurement calculation.
+# 3. Architecture
+
+## 3.1 Application Structure
+
+The project follows a layered structure where API handling, file reading, CRS processing, and measurement calculation are separated.
+
+```text
+geospatial-api/
+│
+├── manage.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+│
+├── config/
+│   ├── settings.py
+│   └── urls.py
+│
+└── files/
+    ├── migrations/
+    ├── admin.py
+    ├── models.py
+    ├── serializers.py
+    ├── tests.py
+    ├── urls.py
+    ├── views.py
+    │
+    └── services/
+        ├── file_reader.py
+        ├── crs_handler.py
+        ├── measurement.py
+        └── processor.py
+```
+
+### Main Components
+
+**`views.py`**
+
+Handles HTTP requests and API responses.
+
+**`serializers.py`**
+
+Converts Django model objects into JSON responses.
+
+**`models.py`**
+
+Stores uploaded-file information and feature measurements.
+
+**`file_reader.py`**
+
+Reads KML files and ZIP archives containing Shapefiles.
+
+**`crs_handler.py`**
+
+Handles CRS detection and transformation.
+
+**`measurement.py`**
+
+Calculates area and length based on geometry type.
+
+**`processor.py`**
+
+Coordinates the complete geospatial processing pipeline.
+
+---
+
+## 3.2 File-Processing Flow
+
+The file-processing flow is:
 
 ```text
 Client
-  │
-  ▼
-Django REST API
-  │
-  ▼
-FileUploadView
-  │
-  ▼
-processor.py
-  │
-  ├── file_reader.py
-  │
-  ├── crs_handler.py
-  │
-  └── measurement.py
-  │
-  ▼
+   │
+   │ POST /api/files/
+   ▼
+Django API
+   │
+   ▼
+Validate file extension
+   │
+   ▼
+Save uploaded file
+   │
+   ▼
+file_reader.py
+   │
+   ├── KML
+   │     └── GeoPandas reads KML
+   │
+   └── ZIP
+         └── Extract ZIP
+              └── Find .shp
+                   └── GeoPandas reads Shapefile
+   │
+   ▼
 GeoDataFrame
-  │
-  ▼
-Database
-  │
-  ├── UploadedFile
-  └── FeatureMeasurement
+   │
+   ▼
+CRS handling
+   │
+   ▼
+Measurement calculation
+   │
+   ▼
+Save results in database
+   │
+   ▼
+Return API response
 ```
 
-### File Reader
+Both supported input formats are converted into a common **GeoDataFrame**, allowing the rest of the processing pipeline to remain independent of the original file format.
 
-`file_reader.py` handles the two supported input formats.
+---
 
-For KML:
+## 3.3 Measurement Calculation Flow
+
+Each feature in the GeoDataFrame is inspected based on its geometry type.
 
 ```text
-KML → GeoPandas → GeoDataFrame
+Feature
+   │
+   ├── Polygon
+   │      └── Calculate area
+   │
+   ├── MultiPolygon
+   │      └── Calculate area
+   │
+   ├── LineString
+   │      └── Calculate length
+   │
+   ├── MultiLineString
+   │      └── Calculate length
+   │
+   ├── Point
+   │      └── No measurement
+   │
+   └── Other geometry
+          └── No measurement
 ```
 
-For a ZIP Shapefile:
+Measurements are calculated using the geometry operations provided by Shapely through GeoPandas.
 
-```text
-ZIP
- ↓
-Extract files
- ↓
-Find .shp
- ↓
-GeoPandas
- ↓
-GeoDataFrame
+For example:
+
+```python
+geometry.area
 ```
 
-This allows the rest of the application to work with a common `GeoDataFrame` regardless of the input format.
+is used for polygon area, while:
 
-### CRS Handling
+```python
+geometry.length
+```
 
-`crs_handler.py` is responsible for coordinate reference systems.
+is used for line length.
 
-Geographic CRS such as:
+The calculated values are stored in the `FeatureMeasurement` model.
+
+---
+
+## 3.4 CRS Handling
+
+CRS handling is an important part of the application because area and distance should not be calculated directly using latitude/longitude coordinates.
+
+For example, a file may use:
 
 ```text
 EPSG:4326
 ```
 
-represents coordinates using longitude and latitude. Area and length should not be calculated directly from these degree-based coordinates.
+which represents geographic coordinates using longitude and latitude.
 
-The application therefore:
+The processing flow is:
 
 ```text
-Original CRS
-     ↓
-Check whether CRS is projected
-     ↓
-If geographic → estimate suitable UTM CRS
-     ↓
-Transform using to_crs()
-     ↓
-Calculate measurements
+Original GeoDataFrame
+        │
+        ▼
+Check CRS
+        │
+        ├── Already projected
+        │       └── Use existing CRS
+        │
+        └── Geographic CRS
+                │
+                ▼
+        Estimate suitable UTM CRS
+                │
+                ▼
+             to_crs()
+                │
+                ▼
+        Projected GeoDataFrame
+                │
+                ▼
+        Calculate area/length
 ```
 
-The original CRS and CRS used for measurement are both retained.
+The application stores both:
 
-### Measurement Calculation
+- **Original CRS**
+- **Measurement CRS**
 
-`measurement.py` calculates measurements based on geometry type.
+This makes it clear which coordinate system was present in the source file and which coordinate system was used for measurement calculations.
 
-| Geometry | Measurement |
-|---|---|
-| Polygon | Area |
-| MultiPolygon | Area |
-| LineString | Length |
-| MultiLineString | Length |
-| Point | None |
-| Unsupported geometry | No measurement |
+If a file has no CRS, the application does not guess the coordinate system and instead reports a processing error.
 
-Measurements are calculated after CRS transformation so that area and length are based on a projected coordinate system.
+---
 
-## Data Model
+# 4. Design Decisions
 
-### UploadedFile
+## Django + Django REST Framework
 
-Stores metadata about each uploaded file.
+Django and Django REST Framework were selected because they provide:
 
-Important fields include:
+- Structured application architecture
+- File upload handling
+- ORM/database support
+- Serialization
+- REST API support
+- Built-in administration
+- Straightforward testing
 
-- `id`
-- `filename`
-- `file`
-- `feature_count`
-- `crs`
-- `measurement_crs`
-- `status`
-- `error_message`
-- `created_at`
+An alternative considered was FastAPI. FastAPI would provide a lightweight API-focused architecture, but Django was selected because of its built-in ORM, admin interface, and familiarity with the framework.
 
-### FeatureMeasurement
+---
 
-Stores the result for each feature.
+## GeoPandas for File Processing
 
-Important fields include:
+GeoPandas was selected because it provides a convenient interface for reading and processing geospatial datasets and works naturally with Shapely geometries and CRS transformations.
 
-- `file`
-- `feature_index`
-- `geometry_type`
-- `properties`
-- `area`
-- `length`
+An alternative would be to directly use lower-level geospatial libraries for each file format, but that would require more format-specific processing and increase implementation complexity.
 
-One uploaded file can contain multiple feature measurements.
+---
 
-## Error Handling
+## Shapely for Geometry Measurements
 
-The API handles several failure cases, including:
-
-- Missing file
-- Unsupported file extension
-- Invalid geospatial file
-- ZIP archive without a Shapefile
-- Missing CRS
-- Unable to determine a suitable projected CRS
-- Processing failures
-
-Failed processing is recorded using the `FAILED` status and an associated error message.
-
-Unsupported geometries do not cause the entire processing operation to fail. They are returned without an area or length measurement.
-
-## Testing
-
-Automated API tests cover:
-
-- KML upload
-- Measurement creation
-- Polygon area calculation
-- LineString length calculation
-- Point measurement behavior
-- Database measurement records
-- Missing-file handling
-- Unsupported file formats
-
-Run the test suite with:
-
-```bash
-python manage.py test
-```
-
-## Design Decisions
-
-### Why GeoPandas?
-
-GeoPandas provides convenient support for reading and processing geospatial datasets while integrating naturally with Pandas and Shapely.
-
-### Why Shapely?
-
-Shapely provides geometry objects and geometric operations such as:
+Shapely geometry objects provide operations such as:
 
 ```python
 geometry.area
 geometry.length
 ```
 
-### Why separate CRS handling?
+This keeps measurement logic simple and separates geometry operations from API code.
 
-CRS handling is kept separate from measurement logic so that measurement calculations always operate on appropriately projected geometries.
+---
 
-### Why store measurements separately?
+## Separate Service Layer
 
-A single uploaded file can contain many features, so measurements are represented using a one-to-many relationship between `UploadedFile` and `FeatureMeasurement`.
+The geospatial processing logic is separated from Django views:
 
-### Why UUID for file IDs?
+```text
+views.py
+    ↓
+processor.py
+    ↓
+file_reader.py
+crs_handler.py
+measurement.py
+```
 
-UUIDs provide unique identifiers without relying on sequential integer IDs in API URLs.
+This was chosen to keep the API layer focused on HTTP requests and responses while keeping geospatial logic independently testable and maintainable.
 
-## Learning
+---
 
-Through this project, I worked with:
+## UTM Projection for Measurements
 
-- Django REST Framework API design
-- Geospatial file processing
-- GeoPandas and Shapely
-- Coordinate Reference Systems
-- CRS transformation
-- Area and distance calculations
-- File uploads and storage
-- Relational database design
-- API testing
-- Error handling
-- Django Admin
+When the input data uses a geographic CRS, the application estimates an appropriate UTM CRS and transforms the geometry before calculating measurements.
 
-## Future Improvements
+This avoids calculating area and distance directly from degree-based latitude/longitude coordinates.
 
-Possible improvements include:
+A more advanced production implementation could use more sophisticated CRS selection strategies depending on the geographic extent and intended accuracy.
 
-- Background processing for large files using Celery or a task queue.
-- Support for additional geospatial formats.
-- More sophisticated CRS selection for datasets spanning large geographic areas.
-- File-size and ZIP extraction limits for improved security.
-- Pagination for large measurement responses.
-- Authentication and authorization.
-- PostgreSQL/PostGIS for production geospatial storage.
-- Cloud/object storage for uploaded files.
-- Containerization with Docker.
-- Production deployment with a dedicated web server and application server.
+---
 
-## License
+## SQLite for Persistence
 
-This project was developed as part of a technical assessment and learning exercise.
+SQLite was selected because it is simple to configure and is sufficient for a small assessment project.
+
+The application stores:
+
+```text
+UploadedFile
+      │
+      ├── FeatureMeasurement
+      ├── FeatureMeasurement
+      └── FeatureMeasurement
+```
+
+For a production geospatial application, PostgreSQL with PostGIS would be a stronger alternative because it provides native geospatial database capabilities.
+
+---
+
+## Separate File and Measurement Models
+
+Uploaded-file metadata and individual feature measurements are stored separately.
+
+This creates a one-to-many relationship:
+
+```text
+One UploadedFile
+       │
+       ├── Measurement 1
+       ├── Measurement 2
+       └── Measurement N
+```
+
+This design allows one uploaded file to contain an arbitrary number of features without storing all measurements in a single database record.
+
+---
+
+## Local Media Storage
+
+Uploaded KML and ZIP files are stored using Django's `FileField` and local media storage during development.
+
+This keeps the implementation simple and allows the processing service to access the physical file path.
+
+For production, object storage such as cloud storage could be used instead.
+
+---
+
+# Conclusion
+
+The application provides a complete backend workflow for:
+
+```text
+Upload
+   ↓
+Read geospatial file
+   ↓
+Extract features
+   ↓
+Handle CRS
+   ↓
+Calculate measurements
+   ↓
+Store results
+   ↓
+Expose results through REST APIs
+```
+
+The implementation focuses on keeping the geospatial processing logic separated from the API layer while ensuring that measurements are calculated using an appropriate projected CRS.
